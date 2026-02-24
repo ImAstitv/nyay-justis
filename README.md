@@ -70,6 +70,7 @@ Both workflows converge into the same validated case schema.
 - AI influence on scheduling is capped and explainable
 - Judicial override is always permitted and logged
 - All critical actions are auditable
+- AI-interpreted data is staged and confidence-gated before entering the core system.
 
 ---
 
