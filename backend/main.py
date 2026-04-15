@@ -6,7 +6,7 @@ app = FastAPI(title="JUSTIS API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten to your Vercel URL after deploy
+    allow_origins=["https://nyay-justis.vercel.app"]
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
