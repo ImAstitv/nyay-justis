@@ -185,4 +185,14 @@ export default function LawyerFiling() {
                 {form.is_undertrial && (
                   <input type="number" placeholder="Days in custody" value={form.days_in_custody}
                     onChange={e => setForm({ ...form, days_in_custody: +e.target.value })}
-                    style={{ ...inp, marginTop: 0
+                    style={{ ...inp, marginTop: 0}} />
+                )}
+              </div>
+
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
