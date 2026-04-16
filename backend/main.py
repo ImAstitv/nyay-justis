@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api import auth, cases, ocr, citizen
+from seed_users import seed_users
 
 app = FastAPI(title="JUSTIS API", version="2.0.0")
+
+@app.on_event("startup")
+def startup_event():
+    seed_users()
 
 app.add_middleware(
     CORSMiddleware,
