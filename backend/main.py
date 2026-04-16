@@ -5,13 +5,9 @@ from seed_users import seed_users
 
 app = FastAPI(title="JUSTIS API", version="2.0.0")
 
-@app.on_event("startup")
-def startup_event():
-    seed_users()
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://nyay-justis.vercel.app"],
+    allow_origins=["*"],  # TEMPORARY (debug)
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
@@ -21,6 +17,11 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(cases.router, prefix="/cases", tags=["cases"])
 app.include_router(ocr.router, prefix="/ocr", tags=["ocr"])
 app.include_router(citizen.router, prefix="/citizen", tags=["citizen"])
+
+@app.on_event("startup")
+def startup_event():
+    print("🔥 Seeding users...")
+    seed_users()
 
 @app.get("/")
 def root():
