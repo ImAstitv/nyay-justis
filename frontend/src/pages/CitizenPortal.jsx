@@ -79,4 +79,13 @@ export default function CitizenPortal() {
               </div>
 
               <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '14px' }}>
-                <div style={{ fontSize: '10px', color: '#94a3b8', textT
+                <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '1px' }}>Description</div>
+                <div style={{ fontSize: '15px', color: C.primary, fontWeight: '600', marginTop: '4px' }}>{c.description}</div>
+              </div>
+            </div>
+          );
+        })}
+              </div>
+    </div>
+  );
+}
