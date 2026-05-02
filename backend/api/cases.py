@@ -1,17 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from core.authz import ensure_case_not_disposed, require_roles
 from core.database import get_db
-from models.models import Case, Hearing, AuditLog
+from models.models import AuditLog, Case, Hearing, User
 from services.priority_engine import compute_priority
-from api.auth import get_current_user
 
 router = APIRouter()
 
+
 class CaseCreate(BaseModel):
     case_id_number: str
+    citizen_username: str
     primary_case_nature: str = "Civil"
     procedural_stage: str = "Pre-Trial"
     custody_status: str = "None"
@@ -25,17 +29,20 @@ class CaseCreate(BaseModel):
     is_undertrial: bool = False
     days_in_custody: int = 0
 
+
 def serialize_case(c: Case, role: str = "judge") -> dict:
     result = compute_priority(c)
     base = {
         "id": c.id,
         "case_id_number": c.cnr_number or c.id,
+        "status": c.status,
+        "citizen_username": c.citizen_username,
         "primary_case_nature": c.primary_case_nature,
         "procedural_stage": c.current_stage,
         "filing_date": c.filing_date.strftime("%d %b %Y"),
-        "petitioner": c.petitioner or "—",
-        "respondent": c.respondent or "—",
-        "under_sections": c.under_sections or "—",
+        "petitioner": c.petitioner or "-",
+        "respondent": c.respondent or "-",
+        "under_sections": c.under_sections or "-",
         "is_undertrial": c.is_undertrial,
         "score": result["priority_score"],
         "band": result["band"],
@@ -52,17 +59,28 @@ def serialize_case(c: Case, role: str = "judge") -> dict:
         base["explanation"] = result["citizen_summary"]
     return base
 
+
 @router.get("")
-def get_cases(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    cases = db.query(Case).all()
+def get_cases(db: Session = Depends(get_db), user=Depends(require_roles("judge", "lawyer"))):
+    cases = db.query(Case).filter(Case.status != "Disposed").all()
     serialized = [serialize_case(c, user["role"]) for c in cases]
     serialized.sort(key=lambda x: x["score"], reverse=True)
     return serialized
 
+
 @router.post("")
-def create_case(data: CaseCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+def create_case(data: CaseCreate, db: Session = Depends(get_db), user=Depends(require_roles("lawyer", "judge"))):
+    assigned_citizen = db.query(User).filter(
+        User.username == data.citizen_username,
+        User.role == "citizen",
+    ).first()
+    if not assigned_citizen:
+        raise HTTPException(status_code=400, detail="Citizen account not found")
+
     c = Case(
         cnr_number=data.case_id_number,
+        citizen_username=assigned_citizen.username,
+        filed_by_user_id=user["id"],
         primary_case_nature=data.primary_case_nature,
         current_stage=data.procedural_stage,
         custody_status=data.custody_status,
@@ -76,51 +94,87 @@ def create_case(data: CaseCreate, db: Session = Depends(get_db), user=Depends(ge
         is_undertrial=data.is_undertrial,
         days_in_custody=data.days_in_custody,
         filing_date=datetime.utcnow(),
+        status="Active",
     )
     db.add(c)
     db.commit()
     db.refresh(c)
     return {"status": "success", "id": c.id, "cnr": c.cnr_number}
 
+
 @router.put("/{case_id}/adjourn")
-def adjourn_case(case_id: int, reason: str = "Not specified",
-                 db: Session = Depends(get_db), user=Depends(get_current_user)):
+def adjourn_case(case_id: int, reason: str = "Not specified", db: Session = Depends(get_db), user=Depends(require_roles("judge"))):
     c = db.query(Case).filter(Case.id == case_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Case not found")
+    ensure_case_not_disposed(c)
+
     old_score = c.priority_score
     c.friction_index += 1
     c.updated_at = datetime.utcnow()
     result = compute_priority(c)
     c.priority_score = result["priority_score"]
     c.omega_flag = result["omega_flag"]
-    db.add(AuditLog(
-        case_id=case_id, action="adjournment",
-        performed_by_role=user["role"],
-        old_value=str(old_score),
-        new_value=str(c.priority_score),
-        detail={"reason": reason, "friction_index": c.friction_index}
-    ))
-    db.add(Hearing(
-        case_id=case_id,
-        purpose_of_hearing="Adjourned",
-        adjournment_reason=reason,
-        adjourned_by=user["role"],
-        business_on_date=datetime.utcnow()
-    ))
+    db.add(
+        AuditLog(
+            case_id=case_id,
+            action="adjournment",
+            performed_by_role=user["role"],
+            old_value=str(old_score),
+            new_value=str(c.priority_score),
+            detail={"reason": reason, "friction_index": c.friction_index},
+        )
+    )
+    db.add(
+        Hearing(
+            case_id=case_id,
+            purpose_of_hearing="Adjourned",
+            adjournment_reason=reason,
+            adjourned_by=user["role"],
+            business_on_date=datetime.utcnow(),
+        )
+    )
     db.commit()
     return {"status": "adjourned", "new_score": c.priority_score, "friction": c.friction_index, "omega": c.omega_flag}
 
+
+@router.put("/{case_id}/dispose")
+def dispose_case(case_id: int, db: Session = Depends(get_db), user=Depends(require_roles("judge"))):
+    c = db.query(Case).filter(Case.id == case_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Case not found")
+    if c.status == "Disposed":
+        raise HTTPException(status_code=409, detail="Case already disposed")
+
+    old_status = c.status
+    c.status = "Disposed"
+    c.updated_at = datetime.utcnow()
+    db.add(
+        AuditLog(
+            case_id=case_id,
+            action="dispose",
+            performed_by_role=user["role"],
+            old_value=old_status,
+            new_value=c.status,
+            detail={"disposed_by": user["username"]},
+        )
+    )
+    db.commit()
+    return {"status": "disposed", "case_id": case_id}
+
+
 @router.get("/analytics")
-def get_analytics(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    cases = db.query(Case).all()
+def get_analytics(db: Session = Depends(get_db), user=Depends(require_roles("judge", "lawyer"))):
+    cases = db.query(Case).filter(Case.status != "Disposed").all()
     if not cases:
         return {}
+
     scores = [compute_priority(c)["priority_score"] for c in cases]
     ages = [(datetime.utcnow().date() - c.filing_date.date()).days for c in cases]
     stage_dist = {}
     for c in cases:
         stage_dist[c.current_stage] = stage_dist.get(c.current_stage, 0) + 1
+
     return {
         "total_cases": len(cases),
         "total_priority_load": round(sum(scores), 1),

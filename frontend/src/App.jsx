@@ -6,9 +6,8 @@ import LawyerFiling from './pages/LawyerFiling';
 import CitizenPortal from './pages/CitizenPortal';
 
 function ProtectedRoute({ children, allowedRole }) {
-  const role = localStorage.getItem('nyay_role');
-  const token = localStorage.getItem('nyay_token');
-  if (!token || role !== allowedRole) return <Navigate to="/" />;
+  const role = sessionStorage.getItem('nyay_role');
+  if (!role || role !== allowedRole) return <Navigate to="/" />;
   return children;
 }
 

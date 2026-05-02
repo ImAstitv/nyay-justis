@@ -16,9 +16,12 @@ class Case(Base):
     __tablename__ = "cases"
     id = Column(Integer, primary_key=True)
     cnr_number = Column(String, unique=True)
+    status = Column(String, default="Active", nullable=False)
     case_type = Column(String, default="General")
     petitioner = Column(String)
     respondent = Column(String)
+    citizen_username = Column(String, nullable=True)
+    filed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     under_acts = Column(String)
     under_sections = Column(String)
     filing_date = Column(DateTime, nullable=False, default=datetime.utcnow)

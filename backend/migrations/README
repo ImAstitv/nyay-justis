@@ -1,0 +1,7 @@
+Run migrations from the backend directory:
+
+alembic upgrade head
+
+To create a new revision after model changes:
+
+alembic revision -m "describe change"

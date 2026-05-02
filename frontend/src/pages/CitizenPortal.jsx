@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { searchCases } from '../services/api';
+
 import Header from '../components/Header';
+import { searchCases } from '../services/api';
 
 const C = { primary: '#0f172a', gold: '#d4af37', bg: '#f1f5f9', border: '#e2e8f0' };
 const card = { background: 'white', padding: '24px', borderRadius: '12px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' };
@@ -10,15 +11,17 @@ export default function CitizenPortal() {
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(null);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const r = await searchCases(query);
-      setResults(r.data); setSearched(true);
-    } catch { alert('Search failed. Backend may be waking up — try again in 30 seconds.'); }
+      setResults(r.data);
+      setSearched(true);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Search failed. Please try again.');
+    }
     setLoading(false);
   };
 
@@ -32,13 +35,11 @@ export default function CitizenPortal() {
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Header title="Citizen Case Status Portal" />
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '40px 20px' }}>
-
         <div style={card}>
-          <h3 style={{ color: C.primary, marginBottom: '6px' }}>🔍 Track Your Case</h3>
-          <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '18px' }}>Enter your Case Number (CNR) to check status and priority band.</p>
+          <h3 style={{ color: C.primary, marginBottom: '6px' }}>Track Your Case</h3>
+          <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '18px' }}>Enter your exact Case Number (CNR). Only cases assigned to your account will be returned.</p>
           <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px' }}>
-            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="e.g. CRM/2026/0001"
-              style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }} />
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="e.g. CRM/2026/0001" style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }} />
             <button type="submit" disabled={loading} style={{ background: C.primary, color: 'white', padding: '12px 22px', borderRadius: '6px', border: `1px solid ${C.gold}`, fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               {loading ? 'Searching...' : 'Search'}
             </button>
@@ -47,9 +48,8 @@ export default function CitizenPortal() {
 
         {searched && results.length === 0 && (
           <div style={{ ...card, marginTop: '20px', textAlign: 'center', padding: '50px' }}>
-            <div style={{ fontSize: '36px' }}>🔎</div>
-            <h4 style={{ color: C.primary, marginTop: '12px' }}>No cases found for "{query}"</h4>
-            <p style={{ color: '#64748b', fontSize: '13px' }}>Check the case number and try again.</p>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: C.primary }}>No matching case found</div>
+            <p style={{ color: '#64748b', fontSize: '13px', marginTop: '8px' }}>Check the case number or confirm that the case is assigned to your account.</p>
           </div>
         )}
 
@@ -62,8 +62,11 @@ export default function CitizenPortal() {
                   <h3 style={{ color: C.primary, margin: 0 }}>{c.case_id_number}</h3>
                   <p style={{ color: '#64748b', fontSize: '13px', margin: '3px 0 0 0' }}>{c.primary_case_nature} · {c.procedural_stage}</p>
                 </div>
-                <div style={{ background: bc.bg, color: bc.text, padding: '10px 20px', borderRadius: '10px', fontWeight: '800', fontSize: '15px' }}>
-                  {c.band}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ background: bc.bg, color: bc.text, padding: '10px 20px', borderRadius: '10px', fontWeight: '800', fontSize: '15px' }}>
+                    {c.band}
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '12px', marginTop: '6px' }}>{c.status}</div>
                 </div>
               </div>
 
@@ -79,13 +82,28 @@ export default function CitizenPortal() {
               </div>
 
               <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '14px' }}>
-                <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '1px' }}>Description</div>
-                <div style={{ fontSize: '15px', color: C.primary, fontWeight: '600', marginTop: '4px' }}>{c.description}</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '1px' }}>Case Update</div>
+                <div style={{ fontSize: '15px', color: C.primary, fontWeight: '600', marginTop: '4px' }}>{c.explanation}</div>
               </div>
+
+              {c.timeline?.length > 0 && (
+                <div style={{ marginTop: '14px' }}>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '1px', marginBottom: '8px' }}>Timeline</div>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {c.timeline.map((item, index) => (
+                      <div key={`${c.id}-${index}`} style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: C.primary }}>{item.event}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{item.date}</div>
+                        {item.note && <div style={{ fontSize: '12px', color: '#334155', marginTop: '4px' }}>{item.note}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
-              </div>
+      </div>
     </div>
   );
 }

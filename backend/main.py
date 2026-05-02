@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import auth, cases, ocr, citizen
-from seed_users import seed_users
+
+from api import auth, cases, citizen, ocr
+from core.config import settings
 
 app = FastAPI(title="JUSTIS API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # keep open for now
+    allow_origins=settings.CORS_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
@@ -18,10 +19,6 @@ app.include_router(cases.router, prefix="/cases", tags=["cases"])
 app.include_router(ocr.router, prefix="/ocr", tags=["ocr"])
 app.include_router(citizen.router, prefix="/citizen", tags=["citizen"])
 
-@app.on_event("startup")
-def startup_event():
-    print("🔥 Seeding users...")
-    seed_users()
 
 @app.get("/")
 def root():
