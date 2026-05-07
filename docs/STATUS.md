@@ -9,6 +9,8 @@
 - Tesseract fallback OCR health is working after local installation.
 - PDF OCR support has been added in code.
 - Filing review UX now shows AI metadata, attention fields, manual edit tracking, and source text beside the form.
+- Judge-managed account creation UI now exists in the frontend.
+- PostgreSQL-ready backend config, env template, and URL normalization are now in place.
 
 ## Verified
 - `python -m pytest backend/tests -q`
@@ -23,7 +25,8 @@
 - Handwritten extraction quality is still below the desired standard until that validation is done.
 - Regex fallback extraction is still weak.
 - Overall UI is still prototype quality outside the improved filing review flow.
-- No public signup/create-account flow in frontend yet.
+- No public self-service signup or identity verification flow exists yet.
+- No real PostgreSQL environment has been provisioned and run end-to-end yet.
 - No real court data ingestion pipeline yet.
 - No fully implemented multilingual product architecture yet.
 

@@ -16,6 +16,8 @@
 - OpenAI-first document extraction and structured field extraction
 - Human-review filing workflow with AI-prefilled fields
 - Improved filing review UX with attention states and source-text-assisted correction
+- Judge-managed create-account UI linked from login and dashboard
+- PostgreSQL-ready backend config with normalized hosted DB URLs and pool settings
 - OpenAI-based future multilingual workflows for Indian languages
 - Tesseract retained only as fallback OCR for resilience
 
@@ -49,6 +51,10 @@ $env:COOKIE_SECURE="false"
 $env:COOKIE_SAMESITE="lax"
 $env:ALLOW_LOCAL_BOOTSTRAP="true"
 $env:OPENAI_API_KEY="your-openai-api-key"
+$env:DB_POOL_SIZE="5"
+$env:DB_MAX_OVERFLOW="10"
+$env:DB_POOL_TIMEOUT_SECONDS="30"
+$env:DB_POOL_RECYCLE_SECONDS="1800"
 ```
 
 ## Real Product Gaps Still Open

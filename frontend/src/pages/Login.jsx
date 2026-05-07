@@ -65,6 +65,9 @@ export default function Login() {
             {loading ? 'Verifying...' : 'Verify Identity'}
           </button>
         </form>
+        <button onClick={() => nav('/accounts/new')} style={{ background: 'none', border: 'none', color: '#d4af37', width: '100%', marginTop: 14, cursor: 'pointer', textDecoration: 'underline' }}>
+          Create or request a new account
+        </button>
         <button onClick={() => nav('/')} style={{ background: 'none', border: 'none', color: '#64748b', width: '100%', marginTop: 20, cursor: 'pointer', textDecoration: 'underline' }}>
           Return to Portal
         </button>

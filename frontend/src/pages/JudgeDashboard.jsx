@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import Header from '../components/Header';
 import { adjournCase, disposeCase, getAnalytics, getCases } from '../services/api';
@@ -7,6 +8,7 @@ const C = { primary: '#0f172a', gold: '#d4af37', bg: '#f1f5f9', border: '#e2e8f0
 const card = { background: 'white', padding: '24px', borderRadius: '12px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' };
 
 export default function JudgeDashboard() {
+  const nav = useNavigate();
   const [cases, setCases] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,11 @@ export default function JudgeDashboard() {
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Header title="Judicial Workbench" />
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <button onClick={() => nav('/accounts/new')} style={{ background: C.primary, color: 'white', padding: '11px 16px', borderRadius: '8px', border: 'none', fontWeight: '700', cursor: 'pointer' }}>
+            Create Account
+          </button>
+        </div>
         {analytics && (
           <div style={{ display: 'flex', gap: '16px', marginBottom: '30px', flexWrap: 'wrap' }}>
             {[

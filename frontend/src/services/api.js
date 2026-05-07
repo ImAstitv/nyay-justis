@@ -23,6 +23,7 @@ export const login = (username, password) =>
 
 export const logout = () => client.post('/auth/logout');
 export const getCurrentUser = () => client.get('/auth/me');
+export const createUser = (data) => client.post('/auth/users', data);
 export const getCases = () => client.get('/cases');
 export const createCase = (data) => client.post('/cases', data);
 export const adjournCase = (id, reason) =>
