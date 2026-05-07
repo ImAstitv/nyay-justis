@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str = "dev-secret"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 8
+    ALLOW_LOCAL_BOOTSTRAP: bool = False
     CORS_ALLOWED_ORIGINS: List[str] = Field(default_factory=list)
     COOKIE_SECURE: bool = True
     COOKIE_SAMESITE: str = "none"
