@@ -6,6 +6,23 @@ import { createCase, runNLP, runOCR } from '../services/api';
 const C = { primary: '#0f172a', gold: '#d4af37', bg: '#f1f5f9', border: '#e2e8f0' };
 const card = { background: 'white', padding: '28px', borderRadius: '12px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' };
 const inp = { width: '100%', padding: '11px', marginTop: '5px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' };
+const REQUIRED_FIELDS = ['case_id_number', 'citizen_username'];
+const FIELD_LABELS = {
+  case_id_number: 'Case ID',
+  citizen_username: 'Citizen Username',
+  petitioner: 'Petitioner',
+  respondent: 'Respondent',
+  under_acts: 'Under Acts',
+  under_sections: 'Under Sections',
+  primary_case_nature: 'Case Nature',
+  procedural_stage: 'Stage',
+  custody_status: 'Custody',
+  immediate_risk: 'Immediate Risk',
+  estimated_severity: 'Severity',
+  financial_stake: 'Financial Stake',
+  is_undertrial: 'Undertrial Status',
+  days_in_custody: 'Days In Custody',
+};
 
 export default function LawyerFiling() {
   const [step, setStep] = useState(1);
@@ -13,6 +30,8 @@ export default function LawyerFiling() {
   const [ocrText, setOcrText] = useState('');
   const [ocrError, setOcrError] = useState('');
   const [confidence, setConfidence] = useState(null);
+  const [extractionMeta, setExtractionMeta] = useState(null);
+  const [reviewTouched, setReviewTouched] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
@@ -43,6 +62,7 @@ export default function LawyerFiling() {
     try {
       const r = await runOCR(file);
       setOcrText(r.data.text);
+      setExtractionMeta(null);
       setStep(2);
     } catch (err) {
       setOcrError(err.response?.data?.detail || 'OCR failed. Continue with manual entry.');
@@ -55,7 +75,16 @@ export default function LawyerFiling() {
     try {
       const r = await runNLP(ocrText);
       setForm(f => ({ ...f, ...r.data.fields }));
+      setReviewTouched({});
       setConfidence(r.data.confidence);
+      setExtractionMeta({
+        provider: r.data.provider || 'unknown',
+        fieldsExtracted: r.data.fields_extracted || 0,
+        missingFields: r.data.missing_fields || [],
+        warnings: r.data.warnings || [],
+        language: r.data.language || 'unknown',
+        summary: r.data.summary || '',
+      });
       setStep(3);
     } catch {
       alert('NLP parsing failed.');
@@ -71,7 +100,51 @@ export default function LawyerFiling() {
 
   const handleManualEntry = () => {
     setConfidence(null);
+    setExtractionMeta(null);
+    setReviewTouched({});
     setStep(3);
+  };
+
+  const updateField = (key, value) => {
+    setForm(current => ({ ...current, [key]: value }));
+    setReviewTouched(current => ({ ...current, [key]: true }));
+  };
+
+  const aiMissingFields = extractionMeta?.missingFields || [];
+  const requiredAttentionFields = REQUIRED_FIELDS.filter((key) => !String(form[key] ?? '').trim());
+  const attentionFields = Array.from(new Set([...aiMissingFields, ...requiredAttentionFields]));
+  const reviewedCount = Object.keys(reviewTouched).length;
+  const getFieldTone = (key) => {
+    if (reviewTouched[key]) {
+      return {
+        borderColor: '#2563eb',
+        background: '#eff6ff',
+        label: 'Reviewed manually',
+        textColor: '#1d4ed8',
+      };
+    }
+    if (attentionFields.includes(key)) {
+      return {
+        borderColor: '#f59e0b',
+        background: '#fff7ed',
+        label: 'Needs review',
+        textColor: '#b45309',
+      };
+    }
+    if (confidence !== null && String(form[key] ?? '').trim()) {
+      return {
+        borderColor: '#10b981',
+        background: '#f0fdf4',
+        label: 'AI filled',
+        textColor: '#047857',
+      };
+    }
+    return {
+      borderColor: '#cbd5e1',
+      background: 'white',
+      label: 'Waiting for input',
+      textColor: '#64748b',
+    };
   };
 
   const StepBar = () => (
@@ -101,7 +174,7 @@ export default function LawyerFiling() {
             <div style={{ marginTop: '20px', padding: '14px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
               <strong style={{ color: '#065f46' }}>CNR: {form.case_id_number}</strong>
             </div>
-            <button onClick={() => { setStep(1); setFile(null); setOcrText(''); setOcrError(''); setConfidence(null); setSubmitted(false); }} style={{ background: C.gold, color: C.primary, padding: '12px 28px', borderRadius: '8px', border: 'none', fontWeight: '700', cursor: 'pointer', marginTop: '20px' }}>
+            <button onClick={() => { setStep(1); setFile(null); setOcrText(''); setOcrError(''); setConfidence(null); setExtractionMeta(null); setReviewTouched({}); setSubmitted(false); }} style={{ background: C.gold, color: C.primary, padding: '12px 28px', borderRadius: '8px', border: 'none', fontWeight: '700', cursor: 'pointer', marginTop: '20px' }}>
               File Another Case
             </button>
           </div>
@@ -154,7 +227,7 @@ export default function LawyerFiling() {
             <p style={{ color: '#94a3b8', fontSize: '12px', marginTop: '6px' }}>Edit the text above before parsing if needed.</p>
             <div style={{ textAlign: 'right', marginTop: '18px' }}>
               <button onClick={handleNLP} disabled={loading} type="button" style={{ background: C.gold, color: C.primary, padding: '12px 24px', borderRadius: '6px', border: 'none', fontWeight: '700', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
-                {loading ? 'Parsing...' : 'Parse with NLP'}
+                {loading ? 'Extracting fields...' : 'Extract Fields with AI'}
               </button>
             </div>
           </div>
@@ -164,7 +237,7 @@ export default function LawyerFiling() {
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', padding: '14px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
               <div>
-                <strong style={{ color: '#065f46', fontSize: '14px' }}>{confidence === null ? 'Manual Entry' : 'NLP Extraction Complete'}</strong>
+                <strong style={{ color: '#065f46', fontSize: '14px' }}>{confidence === null ? 'Manual Entry' : 'AI Extraction Complete'}</strong>
                 <p style={{ color: '#16a34a', fontSize: '12px', margin: '3px 0 0 0' }}>Review the filing fields before submission.</p>
               </div>
               <div style={{ textAlign: 'center', minWidth: '72px' }}>
@@ -175,7 +248,53 @@ export default function LawyerFiling() {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {extractionMeta && (
+              <div style={{ marginBottom: '18px', display: 'grid', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                  {[
+                    ['Provider', extractionMeta.provider],
+                    ['Language', extractionMeta.language],
+                    ['Fields Extracted', extractionMeta.fieldsExtracted],
+                    ['Needs Review', attentionFields.length],
+                    ['Reviewed', reviewedCount],
+                  ].map(([label, value]) => (
+                    <div key={label} style={{ background: '#eff6ff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                      <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: '700' }}>{label}</div>
+                      <div style={{ fontSize: '13px', color: '#1e3a8a', marginTop: '4px' }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+                {extractionMeta.summary && (
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '12px', color: '#475569', fontWeight: '700' }}>Summary</div>
+                    <div style={{ fontSize: '13px', color: '#1e293b', marginTop: '4px' }}>{extractionMeta.summary}</div>
+                  </div>
+                )}
+                {extractionMeta.missingFields.length > 0 && (
+                  <div style={{ background: '#fff7ed', padding: '12px 14px', borderRadius: '8px', border: '1px solid #fdba74' }}>
+                    <div style={{ fontSize: '12px', color: '#c2410c', fontWeight: '700' }}>Missing Fields</div>
+                    <div style={{ fontSize: '13px', color: '#9a3412', marginTop: '4px' }}>{extractionMeta.missingFields.join(', ')}</div>
+                  </div>
+                )}
+                {attentionFields.length > 0 && (
+                  <div style={{ background: '#fffbeb', padding: '12px 14px', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                    <div style={{ fontSize: '12px', color: '#b45309', fontWeight: '700' }}>Review Checklist</div>
+                    <div style={{ fontSize: '13px', color: '#92400e', marginTop: '4px' }}>
+                      {attentionFields.map((field) => FIELD_LABELS[field] || field).join(', ')}
+                    </div>
+                  </div>
+                )}
+                {extractionMeta.warnings.length > 0 && (
+                  <div style={{ background: '#fef2f2', padding: '12px 14px', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                    <div style={{ fontSize: '12px', color: '#b91c1c', fontWeight: '700' }}>Warnings</div>
+                    <div style={{ fontSize: '13px', color: '#991b1b', marginTop: '4px' }}>{extractionMeta.warnings.join(' ')}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)', gap: '20px', alignItems: 'start' }}>
+              <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               {[
                 ['Case ID *', 'case_id_number', 'text', true],
                 ['Citizen Username *', 'citizen_username', 'text', true],
@@ -183,12 +302,15 @@ export default function LawyerFiling() {
                 ['Respondent', 'respondent', 'text', false],
                 ['Under Acts', 'under_acts', 'text', false],
                 ['Under Sections', 'under_sections', 'text', false],
-              ].map(([label, key, type, required]) => (
+              ].map(([label, key, type, required]) => {
+                const tone = getFieldTone(key);
+                return (
                 <div key={key}>
                   <label style={{ fontWeight: '600', fontSize: '13px', color: '#334155' }}>{label}</label>
-                  <input type={type} required={required} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, borderColor: form[key] ? '#10b981' : '#cbd5e1' }} />
+                  <input type={type} required={required} value={form[key]} onChange={e => updateField(key, e.target.value)} style={{ ...inp, borderColor: tone.borderColor, background: tone.background }} />
+                  <div style={{ fontSize: '11px', color: tone.textColor, marginTop: '6px', fontWeight: '600' }}>{tone.label}</div>
                 </div>
-              ))}
+              )})}
 
               {[
                 ['Case Nature', 'primary_case_nature', ['Criminal', 'Civil']],
@@ -196,25 +318,28 @@ export default function LawyerFiling() {
                 ['Custody', 'custody_status', ['None', 'Remand', 'Bail Denied']],
                 ['Immediate Risk', 'immediate_risk', ['None', 'Flight Risk', 'Threat to Life', 'Loss of Livelihood']],
                 ['Severity', 'estimated_severity', ['Low', 'Medium', 'High']],
-              ].map(([label, key, opts]) => (
+              ].map(([label, key, opts]) => {
+                const tone = getFieldTone(key);
+                return (
                 <div key={key}>
                   <label style={{ fontWeight: '600', fontSize: '13px', color: '#334155' }}>{label}</label>
-                  <select value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, borderColor: '#10b981' }}>
+                  <select value={form[key]} onChange={e => updateField(key, e.target.value)} style={{ ...inp, borderColor: tone.borderColor, background: tone.background }}>
                     {opts.map(o => <option key={o}>{o}</option>)}
                   </select>
+                  <div style={{ fontSize: '11px', color: tone.textColor, marginTop: '6px', fontWeight: '600' }}>{tone.label}</div>
                 </div>
-              ))}
+              )})}
 
               <div style={{ gridColumn: '1/-1', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px dashed #cbd5e1', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <input type="checkbox" checked={form.financial_stake} onChange={e => setForm({ ...form, financial_stake: e.target.checked })} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <input type="checkbox" checked={form.financial_stake} onChange={e => updateField('financial_stake', e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
                 <label style={{ fontWeight: '600', fontSize: '14px', color: '#334155' }}>High Financial / Property Stake</label>
               </div>
 
               <div style={{ gridColumn: '1/-1', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px dashed #f59e0b', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <input type="checkbox" checked={form.is_undertrial} onChange={e => setForm({ ...form, is_undertrial: e.target.checked })} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <input type="checkbox" checked={form.is_undertrial} onChange={e => updateField('is_undertrial', e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
                 <label style={{ fontWeight: '600', fontSize: '14px', color: '#92400e' }}>Accused is Undertrial Prisoner</label>
                 {form.is_undertrial && (
-                  <input type="number" placeholder="Days in custody" value={form.days_in_custody} onChange={e => setForm({ ...form, days_in_custody: Number(e.target.value) })} style={{ ...inp, marginTop: 0 }} />
+                  <input type="number" placeholder="Days in custody" value={form.days_in_custody} onChange={e => updateField('days_in_custody', Number(e.target.value))} style={{ ...inp, marginTop: 0, borderColor: getFieldTone('days_in_custody').borderColor, background: getFieldTone('days_in_custody').background }} />
                 )}
               </div>
 
@@ -223,7 +348,20 @@ export default function LawyerFiling() {
                   Submit Case
                 </button>
               </div>
-            </form>
+              </form>
+
+              <aside style={{ background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '18px', position: 'sticky', top: '24px' }}>
+                <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>Source Text Reference</div>
+                <p style={{ fontSize: '12px', color: '#64748b', marginTop: 0, marginBottom: '12px' }}>
+                  Keep this beside the form while correcting missing or uncertain values.
+                </p>
+                <textarea
+                  value={ocrText}
+                  onChange={e => setOcrText(e.target.value)}
+                  style={{ width: '100%', minHeight: '360px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.6, background: 'white', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </aside>
+            </div>
           </div>
         )}
       </div>

@@ -1,30 +1,27 @@
 # Handoff
 
 ## Active Repo
-- Worktree copy used during implementation:
-  - `C:\Users\astit\.codex\worktrees\9655\nyay-justis`
-- Desktop repo to sync before deployment:
+- Source of truth repo:
   - `C:\Users\astit\Desktop\nyay-justis`
 
 ## Remote
 - `origin`: `https://github.com/ImAstitv/nyay-justis.git`
 
-## Important Commits Already Created In Worktree
+## Important Commits Already Created
 - `19ed362` `Harden app baseline and add migrations/authz scaffolding`
 - `8ec10c9` `Add backend pytest coverage for authz and migrations`
+- `9244648` `Add repo handoff docs and real-user/OCR improvements`
 
-## Current Uncommitted Worktree Changes At Time Of Writing
-- real DB-backed user creation and password change endpoints
-- OCR diagnostics
-- PDF OCR support
-- local bootstrap guard
-- NumPy compatibility pin
-- migration smoke test path fix
-- `frontend/package-lock.json`
+## Current Focus
+- OpenAI-first document extraction and structured field extraction
+- Human-review filing workflow with AI-prefilled fields
+- Improved filing review UX with attention states and source-text-assisted correction
+- OpenAI-based future multilingual workflows for Indian languages
+- Tesseract retained only as fallback OCR for resilience
 
 ## Backend Commands
 ```powershell
-cd C:\Users\astit\.codex\worktrees\9655\nyay-justis\backend
+cd C:\Users\astit\Desktop\nyay-justis\backend
 python -m pytest backend/tests -q
 python -m compileall backend
 python -m alembic upgrade head
@@ -32,15 +29,16 @@ python -m alembic upgrade head
 
 ## Frontend Commands
 ```powershell
-cd C:\Users\astit\.codex\worktrees\9655\nyay-justis\frontend
+cd C:\Users\astit\Desktop\nyay-justis\frontend
 npm install
 npm run build
 ```
 
 ## Local OCR Requirements
-- Tesseract installed
-- backend process PATH includes `C:\Program Files\Tesseract-OCR`
-- `/ocr/health` should return `ok: true`
+- `OPENAI_API_KEY` configured for primary extraction
+- Tesseract installed for fallback OCR
+- backend process PATH includes `C:\Program Files\Tesseract-OCR` if fallback is needed
+- `/ocr/health` should show OpenAI document extraction config and fallback OCR health
 
 ## Local Dev Environment Used
 ```powershell
@@ -50,6 +48,7 @@ $env:CORS_ALLOWED_ORIGINS='["http://localhost:5173","http://127.0.0.1:5173"]'
 $env:COOKIE_SECURE="false"
 $env:COOKIE_SAMESITE="lax"
 $env:ALLOW_LOCAL_BOOTSTRAP="true"
+$env:OPENAI_API_KEY="your-openai-api-key"
 ```
 
 ## Real Product Gaps Still Open
@@ -58,7 +57,7 @@ $env:ALLOW_LOCAL_BOOTSTRAP="true"
 - create-account frontend flow
 - production database posture with PostgreSQL
 - real court data ingestion
-- multilingual infrastructure
+- multilingual infrastructure using OpenAI language workflows
 - full frontend redesign
 - public deployment and operations
 
@@ -69,4 +68,4 @@ Start here:
 3. read `docs/ARCHITECTURE.md`
 4. inspect `git status`
 5. inspect latest commits
-6. continue from worktree until Desktop repo sync is explicitly done
+6. keep OpenAI as primary extraction and treat Tesseract as fallback unless there is a deliberate architectural decision to remove it

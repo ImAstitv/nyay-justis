@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 8
     ALLOW_LOCAL_BOOTSTRAP: bool = False
+    OPENAI_API_KEY: str | None = None
+    OPENAI_EXTRACTION_MODEL: str = "gpt-4.1"
+    OPENAI_TIMEOUT_SECONDS: int = 90
     CORS_ALLOWED_ORIGINS: List[str] = Field(default_factory=list)
     COOKIE_SECURE: bool = True
     COOKIE_SAMESITE: str = "none"
