@@ -27,6 +27,7 @@ def test_alembic_upgrade_creates_expected_schema(tmp_path):
         case_columns = {column["name"] for column in inspector.get_columns("cases")}
 
         assert {"users", "cases", "hearings", "audit_log"}.issubset(tables)
-        assert {"status", "citizen_username", "filed_by_user_id"}.issubset(case_columns)
+        assert {"status", "filed_by_user_id"}.issubset(case_columns)
+        assert "citizen_username" not in case_columns
     finally:
         settings.DATABASE_URL = old_database_url

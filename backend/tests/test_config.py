@@ -19,3 +19,13 @@ def test_keeps_sqlite_url_unchanged():
     )
 
     assert settings.DATABASE_URL == "sqlite:///./nyay.db"
+
+
+def test_parses_supported_document_languages_from_csv():
+    settings = Settings(
+        DATABASE_URL="sqlite:///./nyay.db",
+        SECRET_KEY="secret",
+        SUPPORTED_DOCUMENT_LANGUAGES="English,Hindi,Marathi",
+    )
+
+    assert settings.SUPPORTED_DOCUMENT_LANGUAGES == ["English", "Hindi", "Marathi"]

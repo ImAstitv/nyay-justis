@@ -8,6 +8,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 DEFAULT_USERS = [
     {
+        "username": "admin",
+        "password": "admin123",
+        "role": "admin",
+        "full_name": "Registry Admin",
+    },
+    {
         "username": "judge",
         "password": "judge123",
         "role": "judge",
@@ -18,12 +24,6 @@ DEFAULT_USERS = [
         "password": "lawyer123",
         "role": "lawyer",
         "full_name": "Adv. Priya Mishra",
-    },
-    {
-        "username": "citizen",
-        "password": "citizen123",
-        "role": "citizen",
-        "full_name": "Rajesh Kumar",
     },
 ]
 

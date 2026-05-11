@@ -5,6 +5,7 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
+    healthCheckPath: /
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -22,9 +23,19 @@ services:
         sync: false
       - key: OPENAI_EXTRACTION_MODEL
         value: "gpt-4.1"
+      - key: OPENAI_TIMEOUT_SECONDS
+        value: "90"
+      - key: ENABLE_MULTILINGUAL_PIPELINE
+        value: "true"
+      - key: MULTILINGUAL_TARGET_LANGUAGE
+        value: "English"
+      - key: SUPPORTED_DOCUMENT_LANGUAGES
+        value: "English,Hindi"
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_SAMESITE
         value: "none"
+      - key: COOKIE_DOMAIN
+        sync: false

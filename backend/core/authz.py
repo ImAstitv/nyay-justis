@@ -23,12 +23,6 @@ def require_roles(*roles: str):
     return dependency
 
 
-def require_case_owner(case, user):
-    if case.citizen_username != user["username"]:
-        raise HTTPException(status_code=403, detail="Not authorized to access this case")
-    return case
-
-
 def ensure_case_not_disposed(case):
     if case.status == "Disposed":
         raise HTTPException(status_code=409, detail="Disposed cases cannot be modified")

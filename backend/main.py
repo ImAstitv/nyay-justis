@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import auth, cases, citizen, ocr
+from api import auth, cases, ocr
 from core.config import settings
 
 app = FastAPI(title="JUSTIS API", version="2.0.0")
@@ -17,7 +17,6 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(cases.router, prefix="/cases", tags=["cases"])
 app.include_router(ocr.router, prefix="/ocr", tags=["ocr"])
-app.include_router(citizen.router, prefix="/citizen", tags=["citizen"])
 
 
 @app.get("/")

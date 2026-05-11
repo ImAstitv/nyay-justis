@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_EXTRACTION_MODEL: str = "gpt-4.1"
     OPENAI_TIMEOUT_SECONDS: int = 90
+    ENABLE_MULTILINGUAL_PIPELINE: bool = True
+    MULTILINGUAL_TARGET_LANGUAGE: str = "English"
+    SUPPORTED_DOCUMENT_LANGUAGES: List[str] = Field(default_factory=lambda: ["English", "Hindi"])
     CORS_ALLOWED_ORIGINS: List[str] = Field(default_factory=list)
     COOKIE_SECURE: bool = True
     COOKIE_SAMESITE: str = "none"
@@ -21,9 +24,9 @@ class Settings(BaseSettings):
     DB_POOL_TIMEOUT_SECONDS: int = 30
     DB_POOL_RECYCLE_SECONDS: int = 1800
 
-    @field_validator("CORS_ALLOWED_ORIGINS", mode="before")
+    @field_validator("CORS_ALLOWED_ORIGINS", "SUPPORTED_DOCUMENT_LANGUAGES", mode="before")
     @classmethod
-    def parse_cors_allowed_origins(cls, value):
+    def parse_list_values(cls, value):
         if value in (None, "", []):
             return []
         if isinstance(value, str):

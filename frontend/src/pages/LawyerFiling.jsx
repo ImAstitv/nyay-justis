@@ -6,10 +6,9 @@ import { createCase, runNLP, runOCR } from '../services/api';
 const C = { primary: '#0f172a', gold: '#d4af37', bg: '#f1f5f9', border: '#e2e8f0' };
 const card = { background: 'white', padding: '28px', borderRadius: '12px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' };
 const inp = { width: '100%', padding: '11px', marginTop: '5px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' };
-const REQUIRED_FIELDS = ['case_id_number', 'citizen_username'];
+const REQUIRED_FIELDS = ['case_id_number'];
 const FIELD_LABELS = {
   case_id_number: 'Case ID',
-  citizen_username: 'Citizen Username',
   petitioner: 'Petitioner',
   respondent: 'Respondent',
   under_acts: 'Under Acts',
@@ -36,7 +35,6 @@ export default function LawyerFiling() {
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     case_id_number: '',
-    citizen_username: '',
     primary_case_nature: 'Civil',
     procedural_stage: 'Pre-Trial',
     custody_status: 'None',
@@ -297,7 +295,6 @@ export default function LawyerFiling() {
               <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               {[
                 ['Case ID *', 'case_id_number', 'text', true],
-                ['Citizen Username *', 'citizen_username', 'text', true],
                 ['Petitioner', 'petitioner', 'text', false],
                 ['Respondent', 'respondent', 'text', false],
                 ['Under Acts', 'under_acts', 'text', false],

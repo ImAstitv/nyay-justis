@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { login } from '../services/api';
 
 const LABELS = {
+  admin: 'Admin Authentication',
   judge: 'Judicial Authentication',
   lawyer: 'Advocate Authentication',
-  citizen: 'Citizen Portal Access',
 };
 
 export default function Login() {
@@ -43,7 +43,7 @@ export default function Login() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a, #1e3a5f)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 40, width: 380, backdropFilter: 'blur(10px)' }}>
-        <h3 style={{ color: 'white', textAlign: 'center', marginBottom: 30, fontWeight: 400 }}>{LABELS[role]}</h3>
+        <h3 style={{ color: 'white', textAlign: 'center', marginBottom: 30, fontWeight: 400 }}>{LABELS[role] || 'Portal Authentication'}</h3>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           <input
             type="text"
@@ -65,9 +65,9 @@ export default function Login() {
             {loading ? 'Verifying...' : 'Verify Identity'}
           </button>
         </form>
-        <button onClick={() => nav('/accounts/new')} style={{ background: 'none', border: 'none', color: '#d4af37', width: '100%', marginTop: 14, cursor: 'pointer', textDecoration: 'underline' }}>
-          Create or request a new account
-        </button>
+        <p style={{ color: '#94a3b8', textAlign: 'center', margin: '14px 0 0 0', fontSize: 12 }}>
+          New accounts are created from the admin panel.
+        </p>
         <button onClick={() => nav('/')} style={{ background: 'none', border: 'none', color: '#64748b', width: '100%', marginTop: 20, cursor: 'pointer', textDecoration: 'underline' }}>
           Return to Portal
         </button>

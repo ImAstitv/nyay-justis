@@ -12,9 +12,9 @@ Fields:
 - `created_at`
 
 Roles currently supported:
+- `admin`
 - `judge`
 - `lawyer`
-- `citizen`
 
 ## Case
 Fields:
@@ -24,7 +24,6 @@ Fields:
 - `case_type`
 - `petitioner`
 - `respondent`
-- `citizen_username`
 - `filed_by_user_id`
 - `under_acts`
 - `under_sections`

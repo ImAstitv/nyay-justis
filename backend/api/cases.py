@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from core.authz import ensure_case_not_disposed, require_roles
 from core.database import get_db
-from models.models import AuditLog, Case, Hearing, User
+from models.models import AuditLog, Case, Hearing
 from services.priority_engine import compute_priority
 
 router = APIRouter()
@@ -15,7 +15,6 @@ router = APIRouter()
 
 class CaseCreate(BaseModel):
     case_id_number: str
-    citizen_username: str
     primary_case_nature: str = "Civil"
     procedural_stage: str = "Pre-Trial"
     custody_status: str = "None"
@@ -36,7 +35,6 @@ def serialize_case(c: Case, role: str = "judge") -> dict:
         "id": c.id,
         "case_id_number": c.cnr_number or c.id,
         "status": c.status,
-        "citizen_username": c.citizen_username,
         "primary_case_nature": c.primary_case_nature,
         "procedural_stage": c.current_stage,
         "filing_date": c.filing_date.strftime("%d %b %Y"),
@@ -53,10 +51,7 @@ def serialize_case(c: Case, role: str = "judge") -> dict:
         "friction_index": c.friction_index,
         "section_436a": result["section_436a"],
     }
-    if role == "judge":
-        base["explanation"] = result["judge_explanation"]
-    else:
-        base["explanation"] = result["citizen_summary"]
+    base["explanation"] = result["court_explanation"]
     return base
 
 
@@ -70,16 +65,8 @@ def get_cases(db: Session = Depends(get_db), user=Depends(require_roles("judge",
 
 @router.post("")
 def create_case(data: CaseCreate, db: Session = Depends(get_db), user=Depends(require_roles("lawyer", "judge"))):
-    assigned_citizen = db.query(User).filter(
-        User.username == data.citizen_username,
-        User.role == "citizen",
-    ).first()
-    if not assigned_citizen:
-        raise HTTPException(status_code=400, detail="Citizen account not found")
-
     c = Case(
         cnr_number=data.case_id_number,
-        citizen_username=assigned_citizen.username,
         filed_by_user_id=user["id"],
         primary_case_nature=data.primary_case_nature,
         current_stage=data.procedural_stage,

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from core.config import settings
 from services.nlp_service import extract_fields
 from services.openai_extraction_service import (
     OpenAIExtractionError,
     extract_case_fields_with_openai,
     extract_document_text,
     get_openai_extraction_health,
+    translate_legal_text,
 )
 from services.ocr_service import OCRExtractionError, extract_text, get_ocr_health
 from api.auth import get_current_user
@@ -22,6 +24,11 @@ ALLOWED_OCR_CONTENT_TYPES = {
 
 class TextPayload(BaseModel):
     text: str
+
+
+class TranslatePayload(BaseModel):
+    text: str
+    target_language: str | None = None
 
 @router.post("")
 async def run_ocr(file: UploadFile = File(...), user=Depends(get_current_user)):
@@ -65,3 +72,26 @@ def run_nlp(payload: TextPayload, user=Depends(get_current_user)):
         fallback["language"] = "unknown"
         fallback["summary"] = "Fallback extraction was used because OpenAI extraction was unavailable."
         return fallback
+
+
+@router.post("/translate")
+def run_translation(payload: TranslatePayload, user=Depends(get_current_user)):
+    target_language = payload.target_language or settings.MULTILINGUAL_TARGET_LANGUAGE
+    if not settings.ENABLE_MULTILINGUAL_PIPELINE:
+        return {
+            "source_language": "unknown",
+            "target_language": target_language,
+            "translated_text": payload.text,
+            "notes": ["Multilingual pipeline disabled; returning original text."],
+            "provider": "disabled",
+        }
+    try:
+        return translate_legal_text(payload.text, target_language)
+    except OpenAIExtractionError:
+        return {
+            "source_language": "unknown",
+            "target_language": target_language,
+            "translated_text": payload.text,
+            "notes": ["OpenAI translation unavailable; returning original text."],
+            "provider": "fallback_original",
+        }

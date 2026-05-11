@@ -20,7 +20,6 @@ class Case(Base):
     case_type = Column(String, default="General")
     petitioner = Column(String)
     respondent = Column(String)
-    citizen_username = Column(String, nullable=True)
     filed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     under_acts = Column(String)
     under_sections = Column(String)

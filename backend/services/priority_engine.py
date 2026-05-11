@@ -85,18 +85,18 @@ def compute_priority(case) -> dict:
 
     if P >= 200 or omega:
         band = "High Priority"
-        citizen_msg = "Your case has been flagged as high priority. An early hearing is likely."
+        status_summary = "This case has been flagged as high priority. Early scheduling review is recommended."
     elif P >= 80:
         band = "Medium Priority"
-        citizen_msg = "Your case is in active queue and will be scheduled based on availability."
+        status_summary = "This case is in the active queue and should be scheduled based on capacity."
     else:
         band = "Low Priority"
-        citizen_msg = "Your case is registered and queued. You will be notified when a date is assigned."
+        status_summary = "This case is registered and queued for normal scheduling review."
 
-    judge_explanation = (
-        f"Aging: {A} days → +{round(0.1*A,1)} | "
-        f"Adjournments: {F} × V({V}) × C({C}) → +{round(5.0*F*V*C,1)}"
-        + (" | ⚠️ OMEGA: Anti-starvation +500" if omega else "")
+    court_explanation = (
+        f"Aging: {A} days -> +{round(0.1*A,1)} | "
+        f"Adjournments: {F} x V({V}) x C({C}) -> +{round(5.0*F*V*C,1)}"
+        + (" | OMEGA: Anti-starvation +500" if omega else "")
     )
 
     return {
@@ -106,7 +106,7 @@ def compute_priority(case) -> dict:
         "stage_coeff": C,
         "omega_flag": omega,
         "band": band,
-        "judge_explanation": judge_explanation,
-        "citizen_summary": citizen_msg,
+        "court_explanation": court_explanation,
+        "status_summary": status_summary,
         "section_436a": s436a,
     }

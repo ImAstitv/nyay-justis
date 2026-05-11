@@ -40,7 +40,6 @@ def upgrade():
             sa.Column("case_type", sa.String(), nullable=True, server_default="General"),
             sa.Column("petitioner", sa.String(), nullable=True),
             sa.Column("respondent", sa.String(), nullable=True),
-            sa.Column("citizen_username", sa.String(), nullable=True),
             sa.Column("filed_by_user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
             sa.Column("under_acts", sa.String(), nullable=True),
             sa.Column("under_sections", sa.String(), nullable=True),
@@ -68,8 +67,6 @@ def upgrade():
         case_columns = {column["name"] for column in inspector.get_columns("cases")}
         if "status" not in case_columns:
             op.add_column("cases", sa.Column("status", sa.String(), nullable=True, server_default="Active"))
-        if "citizen_username" not in case_columns:
-            op.add_column("cases", sa.Column("citizen_username", sa.String(), nullable=True))
         if "filed_by_user_id" not in case_columns:
             op.add_column("cases", sa.Column("filed_by_user_id", sa.Integer(), nullable=True))
 

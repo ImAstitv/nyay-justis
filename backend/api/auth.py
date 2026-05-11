@@ -62,7 +62,6 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         username = payload.get("sub")
-        role = payload.get("role")
         if not username:
             raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -73,7 +72,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         return {
             "id": user.id,
             "username": username,
-            "role": role,
+            "role": user.role,
             "name": user.full_name,
         }
     except JWTError:
@@ -92,11 +91,16 @@ class PasswordChangePayload(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
-ALLOWED_ROLES = {"judge", "lawyer", "citizen"}
+ALLOWED_ROLES = {"admin", "judge", "lawyer"}
 
 
 def _hash_password(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def _require_admin(current_user: dict):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can manage user accounts")
 
 
 @router.post("/login")
@@ -112,25 +116,47 @@ def login(response: Response, form: OAuth2PasswordRequestForm = Depends(), db: S
 
 @router.post("/users")
 def create_user(payload: UserCreatePayload, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user["role"] != "judge":
-        raise HTTPException(status_code=403, detail="Only judges can create user accounts")
+    _require_admin(current_user)
     if payload.role not in ALLOWED_ROLES:
         raise HTTPException(status_code=400, detail=f"Role must be one of: {', '.join(sorted(ALLOWED_ROLES))}")
 
-    existing_user = db.query(User).filter(User.username == payload.username).first()
+    username = payload.username.strip()
+    full_name = payload.full_name.strip()
+    if len(username) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    if not full_name:
+        raise HTTPException(status_code=400, detail="Full name is required")
+
+    existing_user = db.query(User).filter(User.username == username).first()
     if existing_user:
         raise HTTPException(status_code=409, detail="Username already exists")
 
     user = User(
-        username=payload.username,
+        username=username,
         password_hash=_hash_password(payload.password),
         role=payload.role,
-        full_name=payload.full_name,
+        full_name=full_name,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return {"id": user.id, "username": user.username, "role": user.role, "full_name": user.full_name}
+
+
+@router.get("/users")
+def list_users(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    _require_admin(current_user)
+    users = db.query(User).order_by(User.created_at.desc(), User.id.desc()).all()
+    return [
+        {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "full_name": user.full_name,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+        }
+        for user in users
+    ]
 
 
 @router.post("/change-password")

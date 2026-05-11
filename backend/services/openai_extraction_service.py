@@ -22,7 +22,6 @@ CASE_EXTRACTION_SCHEMA = {
             "additionalProperties": False,
             "properties": {
                 "case_id_number": {"type": "string"},
-                "citizen_username": {"type": "string"},
                 "primary_case_nature": {"type": "string"},
                 "procedural_stage": {"type": "string"},
                 "custody_status": {"type": "string"},
@@ -38,7 +37,6 @@ CASE_EXTRACTION_SCHEMA = {
             },
             "required": [
                 "case_id_number",
-                "citizen_username",
                 "primary_case_nature",
                 "procedural_stage",
                 "custody_status",
@@ -69,6 +67,18 @@ CASE_EXTRACTION_SCHEMA = {
         "language",
         "summary",
     ],
+}
+
+TRANSLATION_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "source_language": {"type": "string"},
+        "target_language": {"type": "string"},
+        "translated_text": {"type": "string"},
+        "notes": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["source_language", "target_language", "translated_text", "notes"],
 }
 
 
@@ -119,6 +129,9 @@ def get_openai_extraction_health() -> dict[str, Any]:
         "model": settings.OPENAI_EXTRACTION_MODEL,
         "provider": "openai",
         "timeout_seconds": settings.OPENAI_TIMEOUT_SECONDS,
+        "multilingual_enabled": settings.ENABLE_MULTILINGUAL_PIPELINE,
+        "supported_document_languages": settings.SUPPORTED_DOCUMENT_LANGUAGES,
+        "translation_target_language": settings.MULTILINGUAL_TARGET_LANGUAGE,
     }
 
 
@@ -207,3 +220,49 @@ def extract_case_fields_with_openai(text: str) -> dict[str, Any]:
     extracted["provider"] = "openai"
     extracted["model"] = settings.OPENAI_EXTRACTION_MODEL
     return extracted
+
+
+def translate_legal_text(text: str, target_language: str | None = None) -> dict[str, Any]:
+    desired_language = target_language or settings.MULTILINGUAL_TARGET_LANGUAGE
+    prompt = (
+        "Translate the provided legal text into the requested target language. "
+        "Preserve names, case numbers, statute references, dates, and legal section references exactly. "
+        "Do not omit material facts. If the text is already in the target language, return a faithful cleaned copy. "
+        "Return JSON only."
+    )
+    payload = {
+        "model": settings.OPENAI_EXTRACTION_MODEL,
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": prompt}],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": f"Target language: {desired_language}\n\nSource text:\n{text}",
+                    }
+                ],
+            },
+        ],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "legal_translation",
+                "schema": TRANSLATION_SCHEMA,
+                "strict": True,
+            }
+        },
+    }
+    response_json = _post_responses_api(payload)
+    output_text = _extract_output_text(response_json)
+    try:
+        translated = json.loads(output_text)
+    except json.JSONDecodeError as exc:
+        raise OpenAIExtractionError(f"OpenAI returned invalid translation JSON: {exc}")
+
+    translated["provider"] = "openai"
+    translated["model"] = settings.OPENAI_EXTRACTION_MODEL
+    return translated

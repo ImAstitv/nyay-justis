@@ -15,8 +15,7 @@
   - human review and correction workflow
   - confidence/provenance tracking
 - Real account lifecycle
-  - signup or invite flow
-  - create-account UI
+  - admin-managed staff account creation
   - password reset
   - account disable/lock
 - Real database posture
@@ -49,7 +48,7 @@
 ## Recommended Order
 1. Validate OpenAI extraction on real documents
 2. PostgreSQL + staging
-3. Frontend redesign and create-account flow
+3. Frontend redesign and admin account lifecycle
 4. Multilingual support
 5. Real court data ingestion
 6. Production deployment
